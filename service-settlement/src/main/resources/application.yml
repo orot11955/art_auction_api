@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: service-settlement
+
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/settlement_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USERNAME}
+    password: ${MYSQL_PASSWORD}
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 0
+
+server:
+  port: ${SETTLEMENT_PORT:8085}
+
+settlement:
+  payment:
+    timeout: 86400
+    retry-attempts: 3
+  commission:
+    rate: 0.05
+    min-amount: 1000

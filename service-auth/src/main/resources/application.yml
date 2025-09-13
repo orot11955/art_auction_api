@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: service-auth
+
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/auth_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:rootpassword}
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 0
+
+server:
+  port: ${AUTH_PORT:8081}
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:your-secret-key}
+  access-token-validity: ${JWT_ACCESS_TOKEN_VALIDITY:3600}
+  refresh-token-validity: ${JWT_REFRESH_TOKEN_VALIDITY:86400}
+  issuer: ${JWT_ISSUER:art-auction-auth}
+
+# Security Configuration
+security:
+  password:
+    encoder: bcrypt
+    strength: 12

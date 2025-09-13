@@ -17,6 +17,9 @@ bin/
 !**/src/main/**/bin/
 !**/src/test/**/bin/
 
+### VSCODE ###
+.vscode
+
 ### IntelliJ IDEA ###
 .idea
 *.iws
@@ -35,3 +38,6 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### MAC ###
+.DS_Store

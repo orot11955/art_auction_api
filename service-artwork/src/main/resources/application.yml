@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: service-artwork
+
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/artwork_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USERNAME}
+    password: ${MYSQL_PASSWORD}
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 0
+
+server:
+  port: ${ARTWORK_PORT:8082}
+
+file:
+  upload:
+    path: ${FILE_UPLOAD_PATH:/tmp/uploads}
+    max-size: 10MB
+    allowed-types: image/jpeg,image/png,image/gif
+
+image:
+  thumbnail:
+    width: 300
+    height: 300
+    quality: 0.8
