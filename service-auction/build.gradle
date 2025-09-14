@@ -20,6 +20,8 @@ repositories {
 dependencies {
     implementation project(':common')
     
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    
     // Scheduling
     implementation 'org.springframework.boot:spring-boot-starter-quartz'
     

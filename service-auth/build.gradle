@@ -20,6 +20,9 @@ repositories {
 dependencies {
     implementation project(':common')
     
+    // Development tools for hot reload
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    
     // Additional dependencies specific to auth service
     
     // Security

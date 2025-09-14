@@ -3,17 +3,17 @@ version: '3.8'
 services:
   mysql:
     image: mysql:8.0
-    container_name: auction-mysql
+    container_name: auction-mysql-dev
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
     ports:
       - "3306:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - mysql_data_dev:/var/lib/mysql
       - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql
     networks:
-      - auction-network
+      - auction-network-dev
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       timeout: 20s
@@ -21,21 +21,22 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: auction-redis
+    container_name: auction-redis-dev
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
     ports:
       - "6379:6379"
     volumes:
-      - redis_data:/data
+      - redis_data_dev:/data
     networks:
-      - auction-network
+      - auction-network-dev
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       timeout: 20s
       retries: 10
 
   kafka:
     image: confluentinc/cp-kafka:7.4.0
-    container_name: auction-kafka
+    container_name: auction-kafka-dev
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -47,7 +48,7 @@ services:
     depends_on:
       - zookeeper
     networks:
-      - auction-network
+      - auction-network-dev
     healthcheck:
       test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
       timeout: 20s
@@ -55,25 +56,25 @@ services:
 
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
-    container_name: auction-zookeeper
+    container_name: auction-zookeeper-dev
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
     networks:
-      - auction-network
+      - auction-network-dev
 
-  # Application Services
   service-gateway:
     build:
       context: ..
-      dockerfile: docker/Dockerfile.gateway
-    container_name: auction-gateway
+      dockerfile: docker/Dockerfile.dev
+      target: development
+    container_name: auction-gateway-dev
     ports:
       - "${GATEWAY_PORT}:8080"
     environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
       MYSQL_HOST: mysql
       MYSQL_USERNAME: ${MYSQL_USERNAME}
       MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD}
@@ -81,6 +82,11 @@ services:
       REDIS_PORT: ${REDIS_PORT}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    volumes:
+      - ../service-gateway:/app/service-gateway
+      - ../common:/app/common
+      - common_build:/app/common/build
+      - gateway_build:/app/service-gateway/build
     depends_on:
       mysql:
         condition: service_healthy
@@ -89,21 +95,19 @@ services:
       kafka:
         condition: service_healthy
     networks:
-      - auction-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
-      timeout: 20s
-      retries: 10
+      - auction-network-dev
+    command: ["./gradlew", ":service-gateway:bootRun", "--continuous"]
 
   service-auth:
     build:
       context: ..
-      dockerfile: docker/Dockerfile.auth
-    container_name: auction-auth
+      dockerfile: docker/Dockerfile.dev
+      target: development
+    container_name: auction-auth-dev
     ports:
       - "${AUTH_PORT}:8081"
     environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
       MYSQL_HOST: mysql
       MYSQL_PORT: ${MYSQL_PORT}
       MYSQL_USERNAME: ${MYSQL_USERNAME}
@@ -115,23 +119,30 @@ services:
       JWT_ACCESS_TOKEN_VALIDITY: ${JWT_ACCESS_TOKEN_VALIDITY}
       JWT_REFRESH_TOKEN_VALIDITY: ${JWT_REFRESH_TOKEN_VALIDITY}
       JWT_ISSUER: art-auction-auth
+    volumes:
+      - ../service-auth:/app/service-auth
+      - ../common:/app/common
+      - common_build:/app/common/build
+      - auth_build:/app/service-auth/build
     depends_on:
       mysql:
         condition: service_healthy
       redis:
         condition: service_healthy
     networks:
-      - auction-network
+      - auction-network-dev
+    command: ["./gradlew", ":service-auth:bootRun", "--continuous"]
 
   service-artwork:
     build:
       context: ..
-      dockerfile: docker/Dockerfile.artwork
-    container_name: auction-artwork
+      dockerfile: docker/Dockerfile.dev
+      target: development
+    container_name: auction-artwork-dev
     ports:
       - "${ARTWORK_PORT}:8082"
     environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
       MYSQL_HOST: mysql
       MYSQL_PORT: ${MYSQL_PORT}
       MYSQL_USERNAME: ${MYSQL_USERNAME}
@@ -140,23 +151,30 @@ services:
       REDIS_PORT: ${REDIS_PORT}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       FILE_UPLOAD_PATH: /tmp/uploads
+    volumes:
+      - ../service-artwork:/app/service-artwork
+      - ../common:/app/common
+      - common_build:/app/common/build
+      - artwork_build:/app/service-artwork/build
     depends_on:
       mysql:
         condition: service_healthy
       redis:
         condition: service_healthy
     networks:
-      - auction-network
+      - auction-network-dev
+    command: ["./gradlew", ":service-artwork:bootRun", "--continuous"]
 
   service-auction:
     build:
       context: ..
-      dockerfile: docker/Dockerfile.auction
-    container_name: auction-auction
+      dockerfile: docker/Dockerfile.dev
+      target: development
+    container_name: auction-auction-dev
     ports:
       - "${AUCTION_PORT}:8083"
     environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
       MYSQL_HOST: mysql
       MYSQL_PORT: ${MYSQL_PORT}
       MYSQL_USERNAME: ${MYSQL_USERNAME}
@@ -165,6 +183,11 @@ services:
       REDIS_PORT: ${REDIS_PORT}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    volumes:
+      - ../service-auction:/app/service-auction
+      - ../common:/app/common
+      - common_build:/app/common/build
+      - auction_build:/app/service-auction/build
     depends_on:
       mysql:
         condition: service_healthy
@@ -173,17 +196,19 @@ services:
       kafka:
         condition: service_healthy
     networks:
-      - auction-network
+      - auction-network-dev
+    command: ["./gradlew", ":service-auction:bootRun", "--continuous"]
 
   service-bid:
     build:
       context: ..
-      dockerfile: docker/Dockerfile.bid
-    container_name: auction-bid
+      dockerfile: docker/Dockerfile.dev
+      target: development
+    container_name: auction-bid-dev
     ports:
       - "${BID_PORT}:8084"
     environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
       MYSQL_HOST: mysql
       MYSQL_PORT: ${MYSQL_PORT}
       MYSQL_USERNAME: ${MYSQL_USERNAME}
@@ -192,6 +217,11 @@ services:
       REDIS_PORT: ${REDIS_PORT}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    volumes:
+      - ../service-bid:/app/service-bid
+      - ../common:/app/common
+      - common_build:/app/common/build
+      - bid_build:/app/service-bid/build
     depends_on:
       mysql:
         condition: service_healthy
@@ -200,17 +230,19 @@ services:
       kafka:
         condition: service_healthy
     networks:
-      - auction-network
+      - auction-network-dev
+    command: ["./gradlew", ":service-bid:bootRun", "--continuous"]
 
   service-settlement:
     build:
       context: ..
-      dockerfile: docker/Dockerfile.settlement
-    container_name: auction-settlement
+      dockerfile: docker/Dockerfile.dev
+      target: development
+    container_name: auction-settlement-dev
     ports:
       - "${SETTLEMENT_PORT}:8085"
     environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
       MYSQL_HOST: mysql
       MYSQL_PORT: ${MYSQL_PORT}
       MYSQL_USERNAME: ${MYSQL_USERNAME}
@@ -219,6 +251,11 @@ services:
       REDIS_PORT: ${REDIS_PORT}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    volumes:
+      - ../service-settlement:/app/service-settlement
+      - ../common:/app/common
+      - common_build:/app/common/build
+      - settlement_build:/app/service-settlement/build
     depends_on:
       mysql:
         condition: service_healthy
@@ -227,17 +264,19 @@ services:
       kafka:
         condition: service_healthy
     networks:
-      - auction-network
+      - auction-network-dev
+    command: ["./gradlew", ":service-settlement:bootRun", "--continuous"]
 
   service-notification:
     build:
       context: ..
-      dockerfile: docker/Dockerfile.notification
-    container_name: auction-notification
+      dockerfile: docker/Dockerfile.dev
+      target: development
+    container_name: auction-notification-dev
     ports:
       - "${NOTIFICATION_PORT}:8086"
     environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
       MYSQL_HOST: mysql
       MYSQL_PORT: ${MYSQL_PORT}
       MYSQL_USERNAME: ${MYSQL_USERNAME}
@@ -252,6 +291,11 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD}
       EMAIL_ENABLED: true
       EMAIL_FROM: ${EMAIL_FROM}
+    volumes:
+      - ../service-notification:/app/service-notification
+      - ../common:/app/common
+      - common_build:/app/common/build
+      - notification_build:/app/service-notification/build
     depends_on:
       mysql:
         condition: service_healthy
@@ -260,12 +304,21 @@ services:
       kafka:
         condition: service_healthy
     networks:
-      - auction-network
+      - auction-network-dev
+    command: ["./gradlew", ":service-notification:bootRun", "--continuous"]
 
 volumes:
-  mysql_data:
-  redis_data:
+  mysql_data_dev:
+  redis_data_dev:
+  gateway_build:
+  auth_build:
+  artwork_build:
+  auction_build:
+  bid_build:
+  settlement_build:
+  notification_build:
+  common_build:
 
 networks:
-  auction-network:
+  auction-network-dev:
     driver: bridge

@@ -1,0 +1,31 @@
+# Development stage
+FROM gradle:7.6-jdk17 AS development
+
+WORKDIR /app
+
+# Install additional tools for development
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Copy gradle wrapper and build files
+COPY build.gradle settings.gradle ./
+COPY gradle/ gradle/
+COPY gradlew ./
+
+# Copy all source code
+COPY common/ common/
+COPY service-gateway/ service-gateway/
+COPY service-auth/ service-auth/
+COPY service-artwork/ service-artwork/
+COPY service-auction/ service-auction/
+COPY service-bid/ service-bid/
+COPY service-settlement/ service-settlement/
+COPY service-notification/ service-notification/
+
+# Make gradlew executable
+RUN chmod +x ./gradlew
+
+# Expose ports (will be overridden by docker-compose)
+EXPOSE 8080 8081 8082 8083 8084 8085 8086
+
+# Default command (will be overridden by docker-compose)
+CMD ["./gradlew", "bootRun", "--continuous"]
