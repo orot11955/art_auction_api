@@ -18,7 +18,7 @@ server:
 
 # JWT Configuration
 jwt:
-  secret: ${JWT_SECRET:your-secret-key}
+  secret: ${JWT_SECRET:testSecret}
   access-token-validity: ${JWT_ACCESS_TOKEN_VALIDITY:3600}
   refresh-token-validity: ${JWT_REFRESH_TOKEN_VALIDITY:86400}
   issuer: ${JWT_ISSUER:art-auction-auth}

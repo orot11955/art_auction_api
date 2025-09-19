@@ -26,7 +26,7 @@
 * Cache/Lock: Redis 7
 * ORM: JPA(Hibernate) + QueryDSL
 * 보안: Spring Security, JWT
-* 기타: Lombok, MapStruct, Logback, Flyway, JUnit5, Testcontainers
+* 기타: Lombok, MapStruct, Logback, Flyway
 
 <br>
 
